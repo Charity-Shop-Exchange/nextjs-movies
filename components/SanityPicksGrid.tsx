@@ -2,38 +2,49 @@ import React from 'react';
 import { fetchQuery } from '../lib/sanity';
 import { usePaginatedQuery } from 'react-query';
 import Card from './Card';
+import { Genre } from '../types/Genre';
+import { OurPick } from '../types/OurPicks';
 const fetchSanity = async (
 	__key: string,
 	page: number,
-	genre: string,
+	genre: Genre,
 	minR: string,
 	sort: string,
 ) => {
-	const query = /* groq */ `*[_type == "movie"]`;
+	const perPage = 40,
+		start = perPage * (page - 1),
+		end = start + perPage;
+	const formattedSort = sort.replace('.', ' ');
+	const query = /* groq */ `*[_type == "movie" &&
+	genres[].id==${genre.id} &&
+	vote_average>${minR} ]
+	[${start}...${end}]
+	| order(${formattedSort})`;
+
 	return fetchQuery(query);
 };
 interface Props {
 	page: number;
-	genreID: string;
+	genre: Genre;
 	rating: string;
 	sort: string;
 	setTotalPages: (number) => void;
-	picks: 'gold' | 'silver';
+	picks: OurPick;
 }
 
 const SanityPicksGrid = ({
 	page,
-	genreID,
+	genre,
 	rating,
 	sort,
 	setTotalPages,
 	picks,
 }: Props) => {
 	const { resolvedData, latestData, status } = usePaginatedQuery(
-		[picks, page, genreID, rating, sort],
+		[picks, page, genre, rating, sort],
 		fetchSanity,
 	);
-	let results = [];
+	let results;
 
 	if (status === 'success') {
 		results = resolvedData;

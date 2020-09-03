@@ -11,13 +11,10 @@ import SortBy from '../components/SortBy';
 import { Tab } from 'semantic-ui-react';
 import MoviesGrid from '../components/MoviesGrid';
 import SanityPicksGrid from '../components/SanityPicksGrid';
+import { Genre } from '../types/Genre';
 
 Modal.setAppElement('#__next');
 
-interface Genre {
-	name: string;
-	id: string;
-}
 export default function Home() {
 	const [page, setPage] = useState(1);
 	const [totalPages, setTotalPages] = useState(500);
@@ -55,7 +52,7 @@ export default function Home() {
 				<SanityPicksGrid
 					picks='gold'
 					page={page}
-					genreID={genre.id}
+					genre={genre}
 					rating={rating}
 					sort={sort}
 					setTotalPages={setTotalPages}
