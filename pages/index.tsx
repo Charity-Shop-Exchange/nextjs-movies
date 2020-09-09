@@ -93,6 +93,17 @@ export default function Home() {
 			</main>
 			<Modal
 				isOpen={!!router.query.movie}
+				onAfterOpen={() => {
+					const scrollTop = `-${window.scrollY}px`;
+					document.body.style.position = 'fixed';
+					document.body.style.top = scrollTop;
+				}}
+				onAfterClose={() => {
+					const scrollY = document.body.style.top;
+					document.body.style.position = '';
+					document.body.style.top = '';
+					window.scrollTo(0, parseInt(scrollY || '0') * -1);
+				}}
 				onRequestClose={() => router.push('/')}
 				shouldCloseOnOverlayClick={true}
 				shouldFocusAfterRender={true}
@@ -101,9 +112,10 @@ export default function Home() {
 						backgroundColor: 'rgba(0, 0, 0, 0.75)',
 					},
 					content: {
-						top: '20px',
-						left: '50px',
-						right: '50px',
+						position: 'relative',
+						top: '0px',
+						left: '0px',
+						right: '0px',
 						bottom: '0px',
 						background: 'none',
 						border: 'none',
