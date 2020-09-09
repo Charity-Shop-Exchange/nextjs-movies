@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import styles from '../styles/Card.module.css';
-import { Label, Placeholder } from 'semantic-ui-react';
+import { Placeholder } from 'semantic-ui-react';
 import { Movie } from '../types/Movie';
 interface Props {
 	movie: Movie;
@@ -55,7 +55,6 @@ const Card = ({ movie }: Props) => {
 					</span>
 				</a>
 				<div className={styles['post-text']}>
-					<Label>{movie.release_date}</Label>
 					<h3>
 						<a>{movie.title}</a>
 					</h3>

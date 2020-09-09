@@ -2,26 +2,9 @@ import React from 'react';
 import styles from '../styles/movie.id.module.css';
 import { useQuery } from 'react-query';
 import { useRouter } from 'next/router';
-import { Button } from 'semantic-ui-react';
+import { Button, Label } from 'semantic-ui-react';
 import { Movie } from '../types/Movie';
 
-const currencyFormat = (num: number) => {
-	return `$ ${num.toFixed(0).replace(/(\d)(?=(\d{3})+(?!\d))/g, '$1,')}`;
-};
-
-async function fetchMovie(__key, query) {
-	const id = query.id ? query.id : query.movie;
-	if (!id) return;
-	const endpoint = `/api/movie/${id}`;
-	const movie = await fetch(endpoint);
-	return movie.json();
-}
-async function fetchOmdb(__key, id) {
-	if (!id) return;
-	const endpoint = `/api/movie/omdb/${id}`;
-	const movie = await fetch(endpoint);
-	return movie.json();
-}
 const MovieInfo = () => {
 	const router = useRouter();
 
@@ -66,12 +49,12 @@ const MovieInfo = () => {
 							genres list
 							<ul>
 								{movie.genres &&
-									movie.genres.map(g => <li key={g.id}>{g.name}</li>)}
+									movie.genres.map(g => <Label key={g.id}>{g.name}</Label>)}
 							</ul>
 						</div>
 						<div>
 							release date
-							<span>{movie.release_date}</span>
+							<span>{formatReleaseDate(movie.release_date)}</span>
 						</div>
 						<div>
 							{/* adding s for more than one director */}
@@ -115,3 +98,39 @@ const MovieInfo = () => {
 };
 
 export default MovieInfo;
+function formatReleaseDate(releaseDate: string): string {
+	const date = new Date(releaseDate);
+	const dateTimeFormat = new Intl.DateTimeFormat('en', {
+		year: 'numeric',
+		month: 'long',
+		day: '2-digit',
+	});
+	const [
+		{ value: month },
+		,
+		{ value: day },
+		,
+		{ value: year },
+	] = dateTimeFormat.formatToParts(date);
+
+	// console.log(`${day}-${month}-${year}`);
+	// console.log(`${day}👠${month}👢${year}`); // just for fun
+	return `${month} ${year}`;
+}
+const currencyFormat = (num: number) => {
+	return `$ ${num.toFixed(0).replace(/(\d)(?=(\d{3})+(?!\d))/g, '$1,')}`;
+};
+
+async function fetchMovie(__key, query) {
+	const id = query.id ? query.id : query.movie;
+	if (!id) return;
+	const endpoint = `/api/movie/${id}`;
+	const movie = await fetch(endpoint);
+	return movie.json();
+}
+async function fetchOmdb(__key, id) {
+	if (!id) return;
+	const endpoint = `/api/movie/omdb/${id}`;
+	const movie = await fetch(endpoint);
+	return movie.json();
+}

@@ -1,28 +1,16 @@
 import React from 'react';
 import { fetchQuery } from '../lib/sanity';
 import { usePaginatedQuery } from 'react-query';
-import Card from './Card';
-import { Genre } from '../types/Genre';
-import { OurPick } from '../types/OurPicks';
-const fetchSanity = async (
-	__key: string,
-	page: number,
-	genre: Genre,
-	minR: string,
-	sort: string,
-) => {
-	const perPage = 40,
-		start = perPage * (page - 1),
-		end = start + perPage;
-	const formattedSort = sort.replace('.', ' ');
-	const query = /* groq */ `*[_type == "movie" && genres[].id==${genre.id} && vote_average>${minR} ] [${start}...${end}] | order(${formattedSort})`;
 
-	return fetchQuery(query);
-};
+import { OurPick } from '../types/OurPicks';
+import { CardsGrid } from './MoviesGrid';
+
+const PER_PAGE = 40;
+
 interface Props {
 	page: number;
-	genre: Genre;
-	rating: string;
+	genres: number[];
+	rating: number[];
 	sort: string;
 	setTotalPages: (number) => void;
 	picks: OurPick;
@@ -30,33 +18,62 @@ interface Props {
 
 const SanityPicksGrid = ({
 	page,
-	genre,
+	genres,
 	rating,
 	sort,
 	setTotalPages,
 	picks,
 }: Props) => {
 	const { resolvedData, latestData, status } = usePaginatedQuery(
-		[picks, page, genre, rating, sort],
+		[picks, page, genres, rating, sort],
 		fetchSanity,
 	);
 	let results;
 
 	if (status === 'success') {
-		results = resolvedData;
-		setTotalPages(1);
+		results = resolvedData.data;
+		console.log({ results, page: Math.ceil(resolvedData.count / PER_PAGE) });
+
+		setTotalPages(Math.ceil(resolvedData.count / PER_PAGE));
 	}
-	return (
-		<div className='grid'>
-			{resolvedData != latestData && (
-				<div className='loading'>
-					<span></span>
-				</div>
-			)}
-			{resolvedData &&
-				results.map((movie, i) => <Card key={i} movie={movie} />)}
-		</div>
-	);
+	return <CardsGrid {...{ resolvedData, latestData, results }} />;
 };
 
 export default SanityPicksGrid;
+
+const fetchSanity = async (
+	__key: string,
+	page: number,
+	genres: number[],
+	rating: number[],
+	sort: string,
+) => {
+	const [minR, maxR] = rating,
+		start = PER_PAGE * (page - 1),
+		end = start + PER_PAGE;
+
+	// sort
+	const formattedSort = sort.replace('.', ' ');
+
+	// genres
+	let formattedGenres: string[] | string = [];
+	for (const g of genres) {
+		formattedGenres.push(`genres[].id==${g}`);
+	}
+	formattedGenres = formattedGenres.join(' || ');
+
+	// rating
+	const formattedRating = `vote_average>${minR} && vote_average<${maxR}`;
+
+	// query
+	const constraints = `_type == "movie" ${
+		formattedGenres ? `&& ${formattedGenres} ` : ''
+	}&& ${formattedRating}`;
+
+	const query = /* groq */ `{
+		"data" : *[ ${constraints} ] [${start}...${end}] | order(${formattedSort}),
+		"count": count(*[ ${constraints} ])
+	}`;
+
+	return fetchQuery(query);
+};

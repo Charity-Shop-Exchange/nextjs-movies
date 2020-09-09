@@ -5,13 +5,18 @@ import Card from './Card';
 const fetchMovies = async (
 	__key: string,
 	page: number,
-	genre: string,
-	minR: string,
+	genres: number[],
+	rating: number[],
 	sort: string,
 ) => {
 	let info = '';
-	if (genre) info += '&with_genres=' + genre;
-	if (minR) info += '&vote_average.gte=' + minR;
+
+	if (genres) info += '&with_genres=' + genres.join('|');
+	if (rating) {
+		const [minR, maxR] = rating;
+		info += '&vote_average.gte=' + minR;
+		info += '&vote_average.lte=' + maxR;
+	}
 	if (sort) info += '&sort_by=' + sort;
 	const res = await fetch(`/api/movies?page=${page}${info}`);
 	return res.json();
@@ -19,15 +24,15 @@ const fetchMovies = async (
 
 interface Props {
 	page: number;
-	genreID: string;
-	rating: string;
+	genres: number[];
+	rating: number[];
 	sort: string;
 	setTotalPages: (number) => void;
 }
 
-const MoviesGrid = ({ setTotalPages, page, genreID, rating, sort }: Props) => {
+const MoviesGrid = ({ setTotalPages, page, genres, rating, sort }: Props) => {
 	const { resolvedData, latestData, status } = usePaginatedQuery(
-		['movies', page, genreID, rating, sort],
+		['movies', page, genres, rating, sort],
 		fetchMovies,
 	);
 
@@ -37,6 +42,12 @@ const MoviesGrid = ({ setTotalPages, page, genreID, rating, sort }: Props) => {
 		results = resolvedData.results;
 		setTotalPages(resolvedData.total_pages);
 	}
+	return <CardsGrid {...{ resolvedData, latestData, results }} />;
+};
+
+export default MoviesGrid;
+
+export const CardsGrid = ({ resolvedData, latestData, results }) => {
 	return (
 		<div className='grid'>
 			{resolvedData != latestData && (
@@ -44,10 +55,13 @@ const MoviesGrid = ({ setTotalPages, page, genreID, rating, sort }: Props) => {
 					<span></span>
 				</div>
 			)}
-			{resolvedData &&
-				results.map((movie, i) => <Card key={i} movie={movie} />)}
+			{results && results.length > 0 ? (
+				results.map((movie, i) => <Card key={i} movie={movie} />)
+			) : (
+				<h1 style={{ gridColumn: 'span 2', textAlign: 'center' }}>
+					Oops No results{':('}
+				</h1>
+			)}
 		</div>
 	);
 };
-
-export default MoviesGrid;

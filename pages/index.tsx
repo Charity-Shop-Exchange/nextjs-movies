@@ -11,24 +11,30 @@ import SortBy from '../components/SortBy';
 import { Tab } from 'semantic-ui-react';
 import MoviesGrid from '../components/MoviesGrid';
 import SanityPicksGrid from '../components/SanityPicksGrid';
-import { Genre } from '../types/Genre';
 
 Modal.setAppElement('#__next');
 
 export default function Home() {
 	const [page, setPage] = useState(1);
 	const [totalPages, setTotalPages] = useState(500);
-	const [genre, setGenre] = useState<Genre>({ id: '16', name: 'Animation' });
-	const [rating, setRating] = useState('5');
+	const [genres, setGenres] = useState<number[]>([16]);
+	const [rating, setRating] = useState([5, 10]);
 	const [sort, setSort] = useState('popularity.desc');
-	// const ren = useRef(0);
-	// console.log(++ren.current);
-	const handleGenreChange = (genre: Genre) => {
-		setGenre(genre);
+
+	const handleGenreChange = (clickedGenre: number) => {
+		if (genres.indexOf(clickedGenre) > -1)
+			return setGenres(genres.filter(value => value != clickedGenre));
+
+		setGenres(old => [...old, clickedGenre]);
+
 		setPage(1);
 	};
-	const handleRatingChange = (rating: string) => {
-		setRating(rating);
+	const handleRatingChange = (newRating: number[]) => {
+		setRating(newRating);
+		setPage(1);
+	};
+	const handleSortChange = (newSort: string) => {
+		setSort(newSort);
 		setPage(1);
 	};
 
@@ -39,7 +45,7 @@ export default function Home() {
 			render: () => (
 				<MoviesGrid
 					page={page}
-					genreID={genre.id}
+					genres={genres}
 					rating={rating}
 					sort={sort}
 					setTotalPages={setTotalPages}
@@ -52,7 +58,7 @@ export default function Home() {
 				<SanityPicksGrid
 					picks='gold'
 					page={page}
-					genre={genre}
+					genres={genres}
 					rating={rating}
 					sort={sort}
 					setTotalPages={setTotalPages}
@@ -70,10 +76,10 @@ export default function Home() {
 
 			<main className={styles.main}>
 				<h1 className={styles.title}>Welcome to Movies</h1>
-				<GenresList onChange={handleGenreChange} active={genre.id} />
+				<GenresList onChange={handleGenreChange} active={genres} />
 				<div className='filters'>
 					<RatingFilter rating={rating} onChange={handleRatingChange} />
-					<SortBy sort={sort} onChange={setSort} />
+					<SortBy sort={sort} onChange={handleSortChange} />
 				</div>
 				<Pagination {...{ setPage, page }} totalPages={totalPages} />
 				<hr />
