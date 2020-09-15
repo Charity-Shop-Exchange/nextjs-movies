@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { Form, Item, Search } from 'semantic-ui-react';
 import { throttle } from 'lodash';
 import { useRouter } from 'next/router';
@@ -13,7 +13,8 @@ type actionType =
 	| 'CLEAN_QUERY'
 	| 'START_SEARCH'
 	| 'FINISH_SEARCH'
-	| 'UPDATE_SELECTION';
+	| 'UPDATE_SELECTION'
+	| 'UPDATE_QUERY_ONLY';
 type stateType = {
 	loading: boolean;
 	results: any[];
@@ -69,6 +70,10 @@ const MoviesSearch = ({ setSearch, setActiveTab }: Props) => {
 		async (_e, data) => {
 			if (data.value.length === 0) {
 				dispatch({ type: 'CLEAN_QUERY' });
+				return;
+			}
+			if (data.value.length < 3) {
+				dispatch({ type: 'UPDATE_SELECTION', selection: data.value });
 				return;
 			}
 			dispatch({ type: 'START_SEARCH', query: data.value });
