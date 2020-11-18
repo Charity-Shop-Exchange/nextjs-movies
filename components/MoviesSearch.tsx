@@ -1,7 +1,9 @@
-import React from 'react';
-import { Form, Item, Search } from 'semantic-ui-react';
-import { throttle } from 'lodash';
+import React, { useCallback } from 'react';
+import { Form, InputProps, Item, Search } from 'semantic-ui-react';
+import { debounce, throttle } from 'lodash';
 import { useRouter } from 'next/router';
+import { time } from 'console';
+import { SemanticShorthandItem } from 'semantic-ui-react/dist/commonjs/generic';
 
 const initialState = {
 	loading: false,
@@ -38,10 +40,9 @@ function searchReducer(
 			throw new Error();
 	}
 }
-const resultRenderer = props => {
-	const { title, image, date } = props;
+const resultRenderer = ({ title, image, release_date: date, tmdbId }) => {
 	return (
-		<Item>
+		<Item key={tmdbId}>
 			<Item.Image size='tiny' src={image} className='listImage' />
 
 			<Item.Content>
@@ -52,43 +53,72 @@ const resultRenderer = props => {
 	);
 };
 
-const fetchSearch = throttle(
-	async query => (await fetch(`api/search?query=${query}`)).json(),
-	100,
-);
+// const debouncedFetch = debounce(async query => {
+// 	console.log('fetching...' + query);
+// 	return (await fetch(`api/search?query=${query}`)).json();
+// }, 500);
+// const fetchSearch = async query =>
+// 	(await fetch(`api/search?query=${query}`)).json();
 
 interface Props {
-	setSearch: (str: string) => void;
-	setActiveTab: (str: string) => void;
+	handleSearchSubmit: (str: string) => void;
+	handleSelect?: (movie: {
+		title;
+		tmdbId: string;
+		release_date: string;
+		image: string;
+	}) => void;
+	fluid?: boolean;
+	input?: SemanticShorthandItem<InputProps>;
 }
-const MoviesSearch = ({ setSearch, setActiveTab }: Props) => {
-	const [state, dispatch] = React.useReducer(searchReducer, initialState);
-	const { loading, results, value } = state;
+const MoviesSearch = ({
+	handleSearchSubmit,
+	handleSelect,
+	fluid = false,
+	input,
+}: Props) => {
+	const [{ loading, results, value }, dispatch] = React.useReducer(
+		searchReducer,
+		initialState,
+	);
+
 	const router = useRouter();
-
-	const handleSearchChange = React.useCallback(
-		async (_e, data) => {
-			if (data.value.length === 0) {
-				dispatch({ type: 'CLEAN_QUERY' });
-				return;
-			}
-			if (data.value.length < 3) {
-				dispatch({ type: 'UPDATE_SELECTION', selection: data.value });
-				return;
-			}
-			dispatch({ type: 'START_SEARCH', query: data.value });
-
-			const results: [] = await fetchSearch(data.value);
+	const searchFetch = useCallback(
+		async (query: string) => {
+			const newResults = await (
+				await fetch(`api/search?query=${query}`)
+			).json();
 
 			dispatch({
 				type: 'FINISH_SEARCH',
-				results,
+				results: newResults,
 			});
 		},
 		[dispatch],
 	);
+	const debouncedSearchFetch = useCallback(debounce(searchFetch, 500), [
+		searchFetch,
+	]);
+
+	const handleSearchChange = async (_e, data) => {
+		if (data.value.length === 0) {
+			dispatch({ type: 'CLEAN_QUERY' });
+			return;
+		}
+		if (data.value.length < 3) {
+			// update the ui but don't search
+			dispatch({ type: 'UPDATE_SELECTION', selection: data.value });
+			return;
+		}
+
+		dispatch({ type: 'START_SEARCH', query: data.value });
+		await debouncedSearchFetch(data.value);
+	};
 	const handleResultSelect = React.useCallback(
-		(_e, { result: { title, tmdbId } }) => {
+		(_e, { result: { title, tmdbId, release_date, image } }) => {
+			if (typeof handleSelect !== 'undefined') {
+				return handleSelect({ title, tmdbId, release_date, image });
+			}
 			router.push(`/?movie=${tmdbId}`, `/movie/${tmdbId}`);
 			return dispatch({
 				type: 'UPDATE_SELECTION',
@@ -98,17 +128,22 @@ const MoviesSearch = ({ setSearch, setActiveTab }: Props) => {
 		[dispatch, router],
 	);
 	const handleSubmit = React.useCallback(() => {
-		setActiveTab('Search');
-		setSearch(value);
-	}, [setSearch, value, setActiveTab]);
+		handleSearchSubmit(value);
+	}, [handleSearchSubmit, value]);
+
+	const style: React.CSSProperties = {
+		width: fluid ? '100%' : '',
+	};
 
 	return (
-		<div className='search'>
+		<div className='search' style={style}>
 			<Form onSubmit={handleSubmit}>
 				<Form.Group>
-					<Form.Field>
+					<Form.Field style={style}>
 						<label>Search :</label>
 						<Search
+							input={input}
+							fluid
 							minCharacters={3}
 							loading={loading}
 							onResultSelect={handleResultSelect}

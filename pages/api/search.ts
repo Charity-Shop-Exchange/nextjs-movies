@@ -31,9 +31,14 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
 			// default sort by popularity
 			return b.popularity - a.popularity;
 		});
+
 		const results = req.query.full
 			? json
 			: json.results
+					.filter(movie => {
+						const query = (req.query.query as string).toLowerCase();
+						return movie.title.toLowerCase().indexOf(query) === 0;
+					})
 					.slice(0, 3)
 					.map(({ title, poster_path, id, release_date }: Movie) => ({
 						title,
@@ -41,7 +46,7 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
 						 * it is used as the key and not accessible (resultRenderer in MoviesSearch) */
 						id,
 						tmdbId: id,
-						date: formatDate(release_date),
+						release_date: formatDate(release_date),
 						image: tmdbImage(poster_path, '200'),
 					}));
 
